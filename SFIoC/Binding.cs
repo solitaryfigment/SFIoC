@@ -5,56 +5,52 @@ using System.Reflection;
 
 namespace SF.IoC
 {
-    public class Binding<T1,T2> : IBinding where T1 : class where T2 : class
+    public abstract class Binding : IBinding
     {
-        private T1 _instance;
-        private BingingType _bingingType = BingingType.Transient;
-        private List<Dependency> _dependencies = null;
+        protected object _instance;
+        protected BingingType _bingingType = BingingType.Transient;
+        protected List<Dependency> _dependencies = null;
         
-        public Type TypeBoundFrom
-        {
-            get { return typeof(T1); }
-        }
-        
-        public Type TypeBoundTo
-        {
-            get { return typeof(T2); }
-        }
+        public Type TypeBoundFrom { get; internal set; }
+        public Type TypeBoundTo { get; internal set; }
 
-        public Binding()
+        protected Binding(Type typeBoundFrom, Type typeBoundTo)
         {
+            TypeBoundFrom = typeBoundFrom;
+            TypeBoundTo = typeBoundTo;
+            
             if(!TypeBoundFrom.IsAssignableFrom(TypeBoundTo))
             {
                 throw new BindingException($"Type {TypeBoundTo.Name} must inherit from {TypeBoundFrom.Name}.");
             }
         }
 
-        public Binding(T2 instance) : this()
+        protected Binding(Type typeBoundFrom, Type typeBoundTo, object instance) : this(typeBoundFrom, typeBoundTo)
         {
             if(instance != null)
             {
-                _instance = instance as T1;
+                _instance = instance;
             }
         }
 
-        public bool HasInstanceAvailable()
+        public virtual bool HasInstanceAvailable()
         {
             return _instance != null;
         }
         
-        public IBinding AsSingleton()
+        public virtual IBinding AsSingleton()
         {
             _bingingType = BingingType.Singleton;
             return this;
         }
 
-        public IBinding AsTransient()
+        public virtual IBinding AsTransient()
         {
             _bingingType = BingingType.Transient;
             return this;
         }
 
-        public List<Dependency> GetDependencies()
+        public virtual List<Dependency> GetDependencies()
         {
             if(_dependencies != null)
             {
@@ -87,24 +83,26 @@ namespace SF.IoC
                 foreach(var parameterInfo in parameterInfos)
                 {
                     var attribute = parameterInfo.GetCustomAttribute<InjectArgumentAttribute>(true);
-                    
-                    constructorDependencies.Add(new Dependency
+
+                    if(attribute != null)
                     {
-                        MemberName = parameterInfo.Name,
-                        MemberType = MemberTypes.Constructor,
-                        Type = parameterInfo.ParameterType,
-                        Category = (attribute == null) ? "" : attribute.Category
-                    });
+                        constructorDependencies.Add(attribute.CreateDependency(parameterInfo.Name, MemberTypes.Constructor, parameterInfo.ParameterType));
+                    }
+                    else
+                    {
+                        constructorDependencies.Add(new Dependency
+                        {
+                            MemberName = parameterInfo.Name,
+                            MemberType = MemberTypes.Constructor,
+                            Type = parameterInfo.ParameterType
+                        });
+                    }
                 }
 
                 if(constructorDependencies.Count > 0)
                 {
-                    _dependencies.Add(new ConstructorDependency
-                    {
-                        MemberName = "Constructor",
-                        MemberType = MemberTypes.Constructor,
-                        ArgumentDependencies = constructorDependencies,
-                    });
+                    var attribute = constructorInfo.GetCustomAttribute<DefaultConstructorAttribute>(true);
+                    _dependencies.Add(attribute.CreateDependency("Constructor", MemberTypes.Constructor, constructorDependencies));
                 }
             }
             else if (constructorInfos.Count > 1)
@@ -115,28 +113,22 @@ namespace SF.IoC
             foreach(var member in injectedMembers)
             {
                 var property = member as PropertyInfo;
+                var attribute = member.GetCustomAttribute<InjectAttribute>(true);
+                if(!attribute.CanBeUsedOnType(TypeBoundTo))
+                {
+                    // TODO: Log error and continue
+                    continue;
+                }
                 if(property != null)
                 {
-                    _dependencies.Add(new Dependency
-                    {
-                        MemberName = property.Name,
-                        MemberType = MemberTypes.Property,
-                        Category = property.GetCustomAttribute<InjectAttribute>(true).Category,
-                        Type = property.PropertyType
-                    });
+                    _dependencies.Add(attribute.CreateDependency(property.Name, MemberTypes.Property, property.PropertyType));
                 }
                 else
                 {
                     var field = member as FieldInfo;
                     if(field != null)
                     {
-                        _dependencies.Add(new Dependency
-                        {
-                            MemberName = field.Name,
-                            MemberType = MemberTypes.Field,
-                            Category = field.GetCustomAttribute<InjectAttribute>(true).Category,
-                            Type = field.FieldType
-                        });
+                        _dependencies.Add(attribute.CreateDependency(field.Name, MemberTypes.Field, field.FieldType));
                     }
                 }
             }
@@ -144,12 +136,12 @@ namespace SF.IoC
             return _dependencies;
         }
 
-        public object Resolve()
+        public object Resolve(object resolvingOnto, Dependency resolvingDependency)
         {
-            return Resolve(null);
+            return Resolve(resolvingOnto, resolvingDependency, null);
         }
 
-        public object Resolve(params object[] args)
+        public virtual object Resolve(object resolvingOnto, Dependency resolvingDependency, params object[] args)
         {
             if(_instance != null)
             {
@@ -159,18 +151,18 @@ namespace SF.IoC
             {
                 if(args != null && args.Length > 0)
                 {
-                    return Activator.CreateInstance(TypeBoundTo, args) as T1;
+                    return Activator.CreateInstance(TypeBoundTo, args);
                 }
-                return Activator.CreateInstance<T2>() as T1;
+                return Activator.CreateInstance(TypeBoundTo);
             }
 
             if(_instance == null && args != null && args.Length > 0)
             {
-                _instance = Activator.CreateInstance(TypeBoundTo, args) as T1;
+                _instance = Activator.CreateInstance(TypeBoundTo, args);
             }
             else if(_instance == null)
             {
-                _instance = Activator.CreateInstance<T2>() as T1;
+                _instance = Activator.CreateInstance(TypeBoundTo);
             }
 
             return _instance;
@@ -182,6 +174,23 @@ namespace SF.IoC
             disposable?.Dispose();
             _dependencies?.Clear();
             _instance = null;
+            OnDispose();
+        }
+
+        protected virtual void OnDispose()
+        {
+            
+        }
+    }
+
+    public class Binding<T1,T2> : Binding where T1 : class where T2 : class
+    {
+        public Binding() : base(typeof(T1), typeof(T2))
+        {
+        }
+
+        public Binding(T2 instance) : base(typeof(T1), typeof(T2), instance)
+        {
         }
     }
 }

@@ -21,7 +21,7 @@ namespace SFIoCTest
         {
             var obj = new ConcreteInterface();
             var binding1 = new Binding<Interface, ConcreteInterface>(obj);
-            var resolvedObj = binding1.Resolve();
+            var resolvedObj = binding1.Resolve(null, null);
             
             Assert.NotNull(resolvedObj);
             Assert.NotNull(obj);
@@ -31,8 +31,8 @@ namespace SFIoCTest
         public void TransientBindingResolvesNewObject()
         {
             var binding1 = new Binding<Interface, ConcreteInterface>();
-            var resolvedObj1 = binding1.Resolve();
-            var resolvedObj2 = binding1.Resolve();
+            var resolvedObj1 = binding1.Resolve(null, null);
+            var resolvedObj2 = binding1.Resolve(null, null);
             
             Assert.NotNull(resolvedObj1);
             Assert.NotNull(resolvedObj2);
@@ -44,8 +44,8 @@ namespace SFIoCTest
         {
             var obj = new ConcreteInterface();
             var binding1 = new Binding<Interface, ConcreteInterface>(obj);
-            var resolvedObj1 = binding1.Resolve();
-            var resolvedObj2 = binding1.Resolve();
+            var resolvedObj1 = binding1.Resolve(null, null);
+            var resolvedObj2 = binding1.Resolve(null, null);
             
             Assert.NotNull(resolvedObj1);
             Assert.NotNull(resolvedObj2);
@@ -58,8 +58,8 @@ namespace SFIoCTest
         public void SingletonBindingResolvesSameObject()
         {
             var binding1 = new Binding<Interface, ConcreteInterface>().AsSingleton();
-            var resolvedObj1 = binding1.Resolve();
-            var resolvedObj2 = binding1.Resolve();
+            var resolvedObj1 = binding1.Resolve(null, null, null);
+            var resolvedObj2 = binding1.Resolve(null, null, null);
             
             Assert.NotNull(resolvedObj1);
             Assert.NotNull(resolvedObj2);
@@ -70,7 +70,7 @@ namespace SFIoCTest
         public void CanResolveWithParams()
         {
             var binding1 = new Binding<BaseClass, SubClassWithConstructorArgs>();
-            var resolved = binding1.Resolve(42, 4.2f) as SubClassWithConstructorArgs;
+            var resolved = binding1.Resolve(null, null, 42, 4.2f) as SubClassWithConstructorArgs;
 
             Assert.NotNull(resolved);
             Assert.AreEqual(42, resolved.I);
@@ -81,8 +81,8 @@ namespace SFIoCTest
         public void TransientBindingResolveWithParamsAreDifferent()
         {
             var binding1 = new Binding<BaseClass, SubClassWithConstructorArgs>();
-            var resolvedObj1 = binding1.Resolve(42, 4.2f) as SubClassWithConstructorArgs;
-            var resolvedObj2 = binding1.Resolve(3, 1.1f) as SubClassWithConstructorArgs;
+            var resolvedObj1 = binding1.Resolve(null, null, 42, 4.2f) as SubClassWithConstructorArgs;
+            var resolvedObj2 = binding1.Resolve(null, null, 3, 1.1f) as SubClassWithConstructorArgs;
             
             Assert.NotNull(resolvedObj1);
             Assert.NotNull(resolvedObj2);
@@ -97,8 +97,8 @@ namespace SFIoCTest
         public void SingletonBindingResolveWithParamsAreSameAndIgnoreArgs()
         {
             var binding1 = new Binding<BaseClass, SubClassWithConstructorArgs>().AsSingleton();
-            var resolvedObj1 = binding1.Resolve(42, 4.2f) as SubClassWithConstructorArgs;
-            var resolvedObj2 = binding1.Resolve(3, 1.1f) as SubClassWithConstructorArgs;
+            var resolvedObj1 = binding1.Resolve(null, null, 42, 4.2f) as SubClassWithConstructorArgs;
+            var resolvedObj2 = binding1.Resolve(null, null, 3, 1.1f) as SubClassWithConstructorArgs;
             
             Assert.NotNull(resolvedObj1);
             Assert.NotNull(resolvedObj2);
@@ -114,8 +114,8 @@ namespace SFIoCTest
         {
             var instance = new SubClassWithConstructorArgs(90, 0.9f);
             var binding1 = new Binding<BaseClass, SubClassWithConstructorArgs>(instance);
-            var resolvedObj1 = binding1.Resolve(42, 4.2f) as SubClassWithConstructorArgs;
-            var resolvedObj2 = binding1.Resolve(3, 1.1f) as SubClassWithConstructorArgs;
+            var resolvedObj1 = binding1.Resolve(null, null, 42, 4.2f) as SubClassWithConstructorArgs;
+            var resolvedObj2 = binding1.Resolve(null, null, 3, 1.1f) as SubClassWithConstructorArgs;
             
             Assert.NotNull(resolvedObj1);
             Assert.NotNull(resolvedObj2);
@@ -194,7 +194,7 @@ namespace SFIoCTest
             var binding1 = new Binding<BaseClass, SubClassWithFieldDependencies>();
             
             Assert.IsFalse(binding1.HasInstanceAvailable());
-            var resolved = binding1.Resolve();
+            var resolved = binding1.Resolve(null, null);
             Assert.NotNull(resolved);
             Assert.IsFalse(binding1.HasInstanceAvailable());
         }
@@ -205,7 +205,7 @@ namespace SFIoCTest
             var binding1 = new Binding<BaseClass, SubClassWithFieldDependencies>().AsSingleton();
             
             Assert.IsFalse(binding1.HasInstanceAvailable());
-            var resolved = binding1.Resolve();
+            var resolved = binding1.Resolve(null, null);
             Assert.NotNull(resolved);
             Assert.IsTrue(binding1.HasInstanceAvailable());
         }
@@ -216,7 +216,7 @@ namespace SFIoCTest
             var binding1 = new Binding<BaseClass, SubClassWithFieldDependencies>(new SubClassWithFieldDependencies());
             
             Assert.IsTrue(binding1.HasInstanceAvailable());
-            var resolved = binding1.Resolve();
+            var resolved = binding1.Resolve(null, null);
             Assert.NotNull(resolved);
             Assert.IsTrue(binding1.HasInstanceAvailable());
         }

@@ -1,0 +1,10 @@
+<?xml version='1.0'?>
+<Obfuscator>
+    <Var name="InPath" value="." />
+    <Var name="OutPath" value="./Obfuscator_Output" />
+    <Var name="HidePrivateApi" value="true" />
+    <Var name="HideStrings" value="false" />
+    <Var name="ReuseNames" value="false" />
+
+    <Module file="$(InPath)/SFIoC.dll"/>
+</Obfuscator>

@@ -1,5 +1,4 @@
 using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.Reflection;
 
@@ -7,7 +6,9 @@ namespace SF.IoC
 {
     public abstract class Container : IDisposable
     {
-        private readonly Dictionary<Type, Dictionary<string, IBinding>> _bindings = new Dictionary<Type, Dictionary<string, IBinding>>();
+        protected readonly Dictionary<Type, Dictionary<string, IBinding>> _bindings = new Dictionary<Type, Dictionary<string, IBinding>>();
+        protected Binding _tempBinding;
+        
         public string Name { get; private set; }
         
         protected Container(string name) : this(name, null)
@@ -28,31 +29,28 @@ namespace SF.IoC
             }
         }
         
-        public IBinding Bind<T1, T2>(string category = "", T2 instance = null) where T1 : class where T2 : class
+        public virtual IBinding Bind<T1, T2>(string category = "", T2 instance = null) where T1 : class where T2 : class
         {
-            IBinding binding;
             var bindFromType = typeof(T1);
             if(!_bindings.TryGetValue(bindFromType, out var categoryBindingMap))
             {
-                binding = new Binding<T1, T2>(instance);
-                _bindings[bindFromType] = new Dictionary<string, IBinding>()
-                {
-                    {category, binding}
-                };
+                categoryBindingMap = new Dictionary<string, IBinding>();
+                _bindings[bindFromType] = categoryBindingMap;
             }
-            else if(!categoryBindingMap.TryGetValue(category, out binding))
+            
+            if(!categoryBindingMap.TryGetValue(category, out var binding))
             {
                 binding = new Binding<T1, T2>(instance);
                 categoryBindingMap[category] = binding;
             }
             else
             {
-                throw new Exception($"Error: Type: {nameof(T1)} and Category: {category} already bound in Container: {Name}");
+                throw new Exception($"Error: Type: {typeof(T1).Name} and Category: {category} already bound in Container: {Name}");
             }
 
             return binding;
         }
-
+        
         protected void InheritFrom(string containerNameToInherit)
         {
             Context.AddInheritance(Name, containerNameToInherit);
@@ -81,15 +79,44 @@ namespace SF.IoC
         {
             return Resolve(typeof(T), null, new Dictionary<Type, List<IBinding>>(), category) as T;
         }
-        
-        private object Resolve(Type type, Type owner, Dictionary<Type, List<IBinding>> resolvedBindings, string category = "")
+
+        protected IBinding GetBinding(Type type, string category)
         {
-            var binding = FindBinding(type, category);
-            if(binding.HasInstanceAvailable())
+            IBinding binding;
+            try
             {
-                return binding.Resolve();
+                binding = FindBinding(type, category);
+                if(_tempBinding != null)
+                {
+                    _tempBinding.TypeBoundFrom = binding.TypeBoundFrom;
+                    _tempBinding.TypeBoundTo = binding.TypeBoundTo;
+                    binding = _tempBinding;
+                }
+            }
+            catch(Exception e)
+            {
+                if(_tempBinding != null)
+                {
+                    binding = _tempBinding;
+                }
+                else
+                {
+                    throw;
+                }
             }
 
+            _tempBinding = null;
+
+            return binding;
+        }
+        protected virtual object Resolve(Type type, Type owner, Dictionary<Type, List<IBinding>> resolvedBindings, string category, Dependency resolvingDependency = null, object resolvingOnto = null)
+        {
+            var binding = GetBinding(type, category);
+            if(binding.HasInstanceAvailable())
+            {
+                return binding.Resolve(resolvingOnto, resolvingDependency);
+            }
+            
             List<IBinding> bindings = null;
             if(owner != null && !resolvedBindings.TryGetValue(owner, out bindings))
             {
@@ -124,18 +151,18 @@ namespace SF.IoC
                     var dependency = constructorDependency.ArgumentDependencies[i];
                     try
                     {
-                        arguments[i] = Resolve(dependency.Type, binding.TypeBoundTo, resolvedBindings, dependency.Category);
+                        arguments[i] = Resolve(dependency.Type, binding.TypeBoundTo, resolvedBindings, dependency.Category, dependency);
                     }
                     catch(Exception exception)
                     {
                         throw new Exception($"Could not resolve Type {dependency.Type.Name} in DefaultConstructor of Type {binding.TypeBoundTo.Name}.", exception);
                     }
                 }
-                instance = binding.Resolve(arguments);
+                instance = binding.Resolve(resolvingOnto, resolvingDependency, arguments);
             }
             else
             {
-                instance = binding.Resolve();
+                instance = binding.Resolve(resolvingOnto, resolvingDependency);
             }
 
             if(instance == null)
@@ -143,18 +170,17 @@ namespace SF.IoC
                 throw new Exception($"Could not resolve {type.Name}.");
             }
             
-            
             foreach(var dependency in dependencies)
             {
                 switch(dependency.MemberType)
                 {
                     case MemberTypes.Field:
                         var field = instance.GetType().GetField(dependency.MemberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy);
-                        field?.SetValue(instance, Resolve(dependency.Type, binding.TypeBoundTo, resolvedBindings, dependency.Category));
+                        field?.SetValue(instance, Resolve(dependency.Type, binding.TypeBoundTo, resolvedBindings, dependency.Category, dependency, instance));
                         break;
                     case MemberTypes.Property:
                         var property = instance.GetType().GetProperty(dependency.MemberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy);
-                        property?.SetValue(instance, Resolve(dependency.Type, binding.TypeBoundTo, resolvedBindings, dependency.Category));
+                        property?.SetValue(instance, Resolve(dependency.Type, binding.TypeBoundTo, resolvedBindings, dependency.Category, dependency, instance));
                         break;
                 }
             }

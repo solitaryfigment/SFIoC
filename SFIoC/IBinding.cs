@@ -10,8 +10,8 @@ namespace SF.IoC
         IBinding AsSingleton();
         IBinding AsTransient();
         bool HasInstanceAvailable();
-        object Resolve();
-        object Resolve(params object[] args);
+        object Resolve(object resolveOnto, Dependency dependency);
+        object Resolve(object resolveOnto, Dependency dependency, params object[] args);
         List<Dependency> GetDependencies();
     }
 }
