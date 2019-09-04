@@ -7,7 +7,7 @@ namespace SF.IoC
     public abstract class Container : IDisposable
     {
         protected readonly Dictionary<Type, Dictionary<string, IBinding>> _bindings = new Dictionary<Type, Dictionary<string, IBinding>>();
-        protected Binding _tempBinding;
+        protected Binding _overrideBinding;
         
         public string Name { get; private set; }
         
@@ -86,18 +86,18 @@ namespace SF.IoC
             try
             {
                 binding = FindBinding(type, category);
-                if(_tempBinding != null)
+                if(_overrideBinding != null)
                 {
-                    _tempBinding.TypeBoundFrom = binding.TypeBoundFrom;
-                    _tempBinding.TypeBoundTo = binding.TypeBoundTo;
-                    binding = _tempBinding;
+                    _overrideBinding.TypeBoundFrom = binding.TypeBoundFrom;
+                    _overrideBinding.TypeBoundTo = binding.TypeBoundTo;
+                    binding = _overrideBinding;
                 }
             }
-            catch(Exception e)
+            catch
             {
-                if(_tempBinding != null)
+                if(_overrideBinding != null)
                 {
-                    binding = _tempBinding;
+                    binding = _overrideBinding;
                 }
                 else
                 {
@@ -105,7 +105,7 @@ namespace SF.IoC
                 }
             }
 
-            _tempBinding = null;
+            _overrideBinding = null;
 
             return binding;
         }
