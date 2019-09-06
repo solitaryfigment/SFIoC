@@ -61,16 +61,6 @@ namespace SFIoCTest
             Assert.AreSame(typeof(BaseClass), bindings[index].Item2.TypeBoundFrom);
             Assert.AreSame(typeof(SubClass), bindings[index].Item2.TypeBoundTo);
         }
-    
-        [Test]
-        public void MustInheritFromType()
-        {
-            var container = new NameableTestContainer("MustInheritFromType");
-            container.Bind<Interface, ConcreteInterface>();
-            container.Bind<AbstractClass, ConcreteAbstractClass>();
-            Assert.Throws<BindingException>(() => { container.Bind<SubClass, BaseClass>(); });
-            Assert.Pass();
-        }
         
         [Test]
         public void CanResolveType()

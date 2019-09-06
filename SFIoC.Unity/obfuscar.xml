@@ -5,7 +5,7 @@
     <Var name="HidePrivateApi" value="true" />
     <Var name="HideStrings" value="false" />
     <Var name="ReuseNames" value="false" />
-    <Var name="LogFile" value="$(OutPath)/SFIoC.mapping.txt" />
+    <Var name="LogFile" value="$(OutPath)/SFIoC.Unity.mapping.txt" />
 
-    <Module file="$(InPath)/SFIoC.dll"/>
+    <Module file="$(InPath)/SFIoC.Unity.dll"/>
 </Obfuscator>

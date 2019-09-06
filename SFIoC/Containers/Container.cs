@@ -29,7 +29,7 @@ namespace SF.IoC
             }
         }
         
-        public virtual IBinding Bind<T1, T2>(string category = "", T2 instance = null) where T1 : class where T2 : class
+        public virtual IBinding Bind<T1, T2>(string category = "", T2 instance = null) where T2 : class, T1
         {
             var bindFromType = typeof(T1);
             if(!_bindings.TryGetValue(bindFromType, out var categoryBindingMap))

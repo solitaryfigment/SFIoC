@@ -9,14 +9,6 @@ namespace SFIoCTest
     public class BindingTests
     {
         [Test]
-        public void MustInheritFromType()
-        {
-            var binding1 = new Binding<Interface, ConcreteInterface>();
-            var binding2 = new Binding<AbstractClass, ConcreteAbstractClass>();
-            Assert.Throws<BindingException>(() => { new Binding<SubClass, BaseClass>(); });
-        }
-
-        [Test]
         public void CanBindToInstance()
         {
             var obj = new ConcreteInterface();

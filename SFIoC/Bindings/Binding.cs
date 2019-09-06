@@ -183,7 +183,7 @@ namespace SF.IoC
         }
     }
 
-    public class Binding<T1,T2> : Binding where T1 : class where T2 : class
+    public class Binding<T1,T2> : Binding where T2 : class, T1
     {
         public Binding() : base(typeof(T1), typeof(T2))
         {
