@@ -21,8 +21,15 @@ namespace SF.IoC.Unity
             {
                 throw new BindingException($"Type {TypeBoundTo.Name} must inherit from {nameof(Object)}.");
             }
+
+            var referencedGameObject = component.transform.Find(componentDependency.ComponentReferencePath);
             
-            return component.transform.Find(componentDependency.ComponentReferencePath).GetComponent(TypeBoundFrom);
+            if(referencedGameObject != null)
+            {
+                return referencedGameObject.GetComponent(TypeBoundFrom);
+            }
+
+            return null;
         }
     }
 }

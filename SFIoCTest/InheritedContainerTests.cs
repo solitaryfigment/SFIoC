@@ -14,7 +14,7 @@ namespace SFIoCTest
         public void Setup()
         {
             Context.Dispose();
-            _parentContainer = new NameableTestContainer("Parent");
+            _parentContainer = new NameableTestContainer();
             _parentContainer.Bind<Interface, ConcreteInterface>().AsSingleton();
             _parentContainer.Bind<AbstractClass, ConcreteAbstractClass>();
             _parentContainer.Bind<BaseClass, SubClassWithFieldDependencies>().AsSingleton();
@@ -24,7 +24,7 @@ namespace SFIoCTest
             _parentContainer.Bind<AbstractClass, ConcreteAbstractClass>("Second");
             _parentContainer.Bind<BaseClass, SubClassWithCategory>("Third");
             
-            _container = new InheritTestContainer("Inherit", "Parent");
+            _container = new InheritTestContainer(typeof(NameableTestContainer));
             _container.Bind<Interface, ConcreteInterface>().AsSingleton();
             _container.Bind<BaseClass, SubClassWithCircularDependencies>("Circle");
             _container.Bind<BaseClass, OtherSubClassWithCircularDependencies>("Other");
@@ -95,16 +95,16 @@ namespace SFIoCTest
         [Test]
         public void CanInheritMultipleContainers()
         {
-            var parent1Container = new NameableTestContainer("Parent1");
+            var parent1Container = new ExtraContainer1();
             parent1Container.Bind<Interface, ConcreteInterface>().AsSingleton();
             parent1Container.Bind<AbstractClass, ConcreteAbstractClass>().AsSingleton();
             
-            var parent2Container = new NameableTestContainer("Parent2");
+            var parent2Container = new ExtraContainer2();
             parent2Container.Bind<Interface, ConcreteInterface>().AsSingleton();
             parent2Container.Bind<AbstractClass, ConcreteAbstractClass>().AsSingleton();
             parent2Container.Bind<BaseClass, SubClass>().AsSingleton();
 
-            var container = new InheritTestContainer("InheritingContainer", "Parent1", "Parent2");
+            var container = new ExtraContainer3(typeof(ExtraContainer1), typeof(ExtraContainer2));
             container.Bind<Interface, ConcreteInterface>().AsSingleton();
 
             var baseClass = container.Resolve<BaseClass>();
@@ -115,7 +115,7 @@ namespace SFIoCTest
             var parent1Interface = parent1Container.Resolve<Interface>();
             var parent2Interface = parent2Container.Resolve<Interface>();
             var childInterface = container.Resolve<Interface>();
-
+            
             Assert.NotNull(baseClass);
             Assert.NotNull(parent2BaseClass);
             Assert.NotNull(abstractClass);
@@ -150,16 +150,16 @@ namespace SFIoCTest
         [Test]
         public void CanChainInheritMultipleContainers()
         {
-            var parent1Container = new InheritTestContainer("Parent1", "Parent2");
+            var parent1Container = new ExtraContainer3(typeof(ExtraContainer1));//"Parent2");
             parent1Container.Bind<Interface, ConcreteInterface>().AsSingleton();
             parent1Container.Bind<AbstractClass, ConcreteAbstractClass>().AsSingleton();
             
-            var parent2Container = new NameableTestContainer("Parent2");
+            var parent2Container = new ExtraContainer1();
             parent2Container.Bind<Interface, ConcreteInterface>().AsSingleton();
             parent2Container.Bind<AbstractClass, ConcreteAbstractClass>().AsSingleton();
             parent2Container.Bind<BaseClass, SubClass>().AsSingleton();
 
-            var container = new InheritTestContainer("InheritingContainer", "Parent1");
+            var container = new ExtraContainer2(typeof(ExtraContainer3));//"Parent1");
             container.Bind<Interface, ConcreteInterface>().AsSingleton();
 
             var baseClass = container.Resolve<BaseClass>();
@@ -205,11 +205,11 @@ namespace SFIoCTest
         [Test]
         public void DisposedInheritedContainersNoLongerResolveBindings()
         {
-            var parentContainer = new NameableTestContainer("DisposedParent");
+            var parentContainer = new ExtraContainer1();
             parentContainer.Bind<Interface, ConcreteInterface>().AsSingleton();
             parentContainer.Bind<AbstractClass, ConcreteAbstractClass>();
         
-            var container = new InheritTestContainer("InheritingContainer", "DisposedParent");
+            var container = new ExtraContainer2(typeof(ExtraContainer1));
             container.Bind<Interface, ConcreteInterface>().AsSingleton();
 
             var abstractClass = container.Resolve<AbstractClass>();

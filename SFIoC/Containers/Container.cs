@@ -9,24 +9,33 @@ namespace SF.IoC
         protected readonly Dictionary<Type, Dictionary<string, IBinding>> _bindings = new Dictionary<Type, Dictionary<string, IBinding>>();
         protected Binding _overrideBinding;
         
-        public string Name { get; private set; }
-        
-        protected Container(string name) : this(name, null)
+        protected Container() : this(null)
         {
         }
         
-        protected Container(string name, params string[] inheritedContainers)
+        protected Container(params Type[] inheritedContainers)
         {
-            Name = name;
             Context.AddContainer(this);
-            if(inheritedContainers == null)
+            if(inheritedContainers != null)
             {
-                return;
+                foreach(var inheritedContainerType in inheritedContainers)
+                {
+                    InheritFrom(inheritedContainerType);
+                }
             }
-            foreach(var inheritedContainerName in inheritedContainers)
-            {
-                InheritFrom(inheritedContainerName);
-            }
+
+            Setup();
+        }
+
+        private void Setup()
+        {
+            SetBindings();
+            OnSetupComplete();
+        }
+        protected abstract void SetBindings();
+
+        protected virtual void OnSetupComplete()
+        {
         }
         
         public virtual IBinding Bind<T1, T2>(string category = "", T2 instance = null) where T2 : class, T1
@@ -45,31 +54,36 @@ namespace SF.IoC
             }
             else
             {
-                throw new Exception($"Error: Type: {typeof(T1).Name} and Category: {category} already bound in Container: {Name}");
+                throw new Exception($"Error: Type: {typeof(T1).Name} and Category: {category} already bound in Container: {GetType().Name}");
             }
 
             return binding;
         }
         
-        protected void InheritFrom(string containerNameToInherit)
+        protected void InheritFrom<T>() where T : Container
         {
-            Context.AddInheritance(Name, containerNameToInherit);
+            Context.AddInheritance<T>(this);
+        }
+        
+        protected void InheritFrom(Type containerType)
+        {
+            Context.AddInheritance(this, containerType);
         }
         
         internal IBinding FindBinding(Type type, string category = "")
         {
             IBinding binding = null;
-            if(!_bindings.TryGetValue(type, out var bindingMap) && !Context.FindInheritedBinding(Name, type, category, out binding))
+            if(!_bindings.TryGetValue(type, out var bindingMap) && !Context.FindInheritedBinding(this, type, category, out binding))
             {
-                throw new Exception($"Error: Type: {type.Name} not bound in Container: {Name}");
+                throw new Exception($"Error: Type: {type.Name} not bound in Container: {GetType().Name}");
             }
 
             if(binding == null && 
                bindingMap != null && 
                !bindingMap.TryGetValue(category, out binding) && 
-               !Context.FindInheritedBinding(Name, type, category, out binding))
+               !Context.FindInheritedBinding(this, type, category, out binding))
             {
-                throw new Exception($"Error: Type: {type.Name} and Category: {category} not bound in Container: {Name}");
+                throw new Exception($"Error: Type: {type.Name} and Category: {category} not bound in Container: {GetType().Name}");
             }
 
             return binding;

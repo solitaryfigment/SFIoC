@@ -1,7 +1,55 @@
+using System;
 using SF.IoC;
 
 namespace SFIoCTest
 {
+    
+
+    public class ExtraContainer1 : Container
+    {
+        public ExtraContainer1() : base()
+        {
+        }
+
+        public ExtraContainer1(params Type[] inheritedContainers) : base(inheritedContainers)
+        {
+        }
+
+        protected override void SetBindings()
+        {
+        }
+    }
+
+    public class ExtraContainer2 : Container
+    {
+        public ExtraContainer2() : base()
+        {
+        }
+
+        public ExtraContainer2(params Type[] inheritedContainers) : base(inheritedContainers)
+        {
+        }
+
+        protected override void SetBindings()
+        {
+        }
+    }
+
+    public class ExtraContainer3 : Container
+    {
+        public ExtraContainer3() : base()
+        {
+        }
+
+        public ExtraContainer3(params Type[] inheritedContainers) : base(inheritedContainers)
+        {
+        }
+
+        protected override void SetBindings()
+        {
+        }
+    }
+    
     public class SubClassWithConstructorArgs : BaseClass
     {
         public float F;
@@ -120,22 +168,49 @@ namespace SFIoCTest
 
     public class TestContainer : Container
     {
-        public TestContainer() : base(nameof(TestContainer))
+        public TestContainer() : base()
         {
+        }
+
+        protected override void SetBindings()
+        {
+            
         }
     }
     
     public class NameableTestContainer : Container
     {
-        public NameableTestContainer(string name) : base(name)
+        public NameableTestContainer() : base()
         {
+        }
+
+        protected override void SetBindings()
+        {
+            
         }
     }
     
     public class InheritTestContainer : Container
     {
-        public InheritTestContainer(string name, params string[] inheritedContainer) : base(name, inheritedContainer)
+        public InheritTestContainer(params Type[] inheritedContainer) : base(inheritedContainer)
         {
+        }
+
+        protected override void SetBindings()
+        {
+            
+        }
+    }
+
+    public class UnboundContainer : Container
+    {
+        public UnboundContainer() : base()
+        {
+        }
+
+        protected override void SetBindings()
+        {
+            
         }
     }
 }

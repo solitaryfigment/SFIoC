@@ -5,9 +5,8 @@ namespace SF.IoC
 {
     public static class Context
     {
-        private static readonly Dictionary<string, Type> _nameToContainerTypeMap = new Dictionary<string, Type>();
-        private static readonly Dictionary<string, List<string>> _containerInheritanceMap = new Dictionary<string, List<string>>();
-        private static readonly Dictionary<Type, Dictionary<string, Container>> _typeToContainerMap = new Dictionary<Type, Dictionary<string, Container>>();
+        private static readonly Dictionary<Type, List<Type>> _containerInheritanceMap = new Dictionary<Type, List<Type>>();
+        private static readonly Dictionary<Type, Container> _typeToContainerMap = new Dictionary<Type, Container>();
         private static bool _disposing;
         
         static Context()
@@ -18,25 +17,12 @@ namespace SF.IoC
         internal static void AddContainer(Container container)
         {
             var containerType = container.GetType();
-            if(_nameToContainerTypeMap.TryGetValue(container.Name, out var type))
+            if(_typeToContainerMap.TryGetValue(containerType, out var boundContainer))
             {
-                throw new Exception($"Error: Container Name: {container.Name} is already bound to Type: {type.Name}. Cannot rebind to Type: {containerType.Name}");
-            }
-            _nameToContainerTypeMap[container.Name] = containerType;
-            
-            if(!_typeToContainerMap.TryGetValue(containerType, out var containersBoundToType))
-            {
-                containersBoundToType = new Dictionary<string, Container>();
-                _typeToContainerMap[containerType] = containersBoundToType;
-            }
-            
-            // Just in case, this should not happen and should be caught by the _nameToContainerTypeMap check
-            if(containersBoundToType.TryGetValue(container.Name, out var boundContainer))
-            {
-                throw new Exception($"Error: Container Name: {container.Name} is already bound to Type: {boundContainer.GetType().Name}. Cannot rebind to Type: {containerType.Name}");
+                throw new Exception($"Error: Container Name: {container.GetType().Name} is already bound to Type: {boundContainer.GetType().Name}. Cannot rebind to Type: {containerType.Name}");
             }
 
-            containersBoundToType[container.Name] = container;
+            _typeToContainerMap[containerType] = container;
         }
 
         internal static void RemoveContainer(Container container)
@@ -47,46 +33,39 @@ namespace SF.IoC
                 return;
             }
             var containerType = container.GetType();
-            if(!_nameToContainerTypeMap.ContainsKey(container.Name))
-            {
-                Console.WriteLine("Name not bound");
-                return;
-            }
-            _nameToContainerTypeMap.Remove(container.Name);
-            _containerInheritanceMap.Remove(container.Name);
             
-            if(!_typeToContainerMap.TryGetValue(containerType, out var containersBoundToType))
+            if(!_typeToContainerMap.Remove(containerType))
             {
                 Console.WriteLine("Type not bound");
                 return;
             }
-            
-            if(containersBoundToType.ContainsKey(container.Name))
-            {
-                Console.WriteLine("Removed");
-                containersBoundToType.Remove(container.Name);
-            }
-            Console.WriteLine("Could not find");
         }
 
-        internal static void AddInheritance(string containerName, string containerNameToInherit)
+        internal static void AddInheritance<T>(Container container) where T : Container
         {
-            if(!_containerInheritanceMap.TryGetValue(containerName, out var inheritanceList))
+            AddInheritance(container, typeof(T));
+        }
+
+        internal static void AddInheritance(Container container, Type inheritedContainerType)
+        {
+            var containerType = container.GetType();
+            if(!_containerInheritanceMap.TryGetValue(containerType, out var inheritanceList))
             {
-                inheritanceList = new List<string>();
-                _containerInheritanceMap[containerName] = inheritanceList;
+                inheritanceList = new List<Type>();
+                _containerInheritanceMap[containerType] = inheritanceList;
             }
 
-            if(!inheritanceList.Contains(containerNameToInherit))
+            if(!inheritanceList.Contains(inheritedContainerType))
             {
-                inheritanceList.Add(containerNameToInherit);
+                inheritanceList.Add(inheritedContainerType);
             }
         }
 
-        internal static bool FindInheritedBinding(string containerName, Type type, string category, out IBinding binding)
+        internal static bool FindInheritedBinding(Container container, Type type, string category, out IBinding binding)
         {
+            var containerType = container.GetType();
             binding = null;
-            if(!_containerInheritanceMap.TryGetValue(containerName, out var inheritedContainerNames))
+            if(!_containerInheritanceMap.TryGetValue(containerType, out var inheritedContainerNames))
             {
                 return false;
             }
@@ -95,14 +74,14 @@ namespace SF.IoC
             {
                 try
                 {
-                    var container = GetContainerByName(inheritedContainerName);
-                    binding = container.FindBinding(type, category);
+                    var inheritedContainer = GetContainerByType(inheritedContainerName);
+                    binding = inheritedContainer.FindBinding(type, category);
                     if(binding != null)
                     {
-                        Console.WriteLine("binding not null in " + container.Name);
+                        Console.WriteLine("binding not null in " + inheritedContainer.GetType().Name);
                         return true;
                     }
-                    Console.WriteLine("binding null in " + container.Name);
+                    Console.WriteLine("binding null in " + inheritedContainer.GetType().Name);
                 }
                 catch
                 {
@@ -113,67 +92,33 @@ namespace SF.IoC
             return false;
         }
         
-        public static Container GetContainerByType<T>(string containerName) where T : Container
+        public static Container GetContainerByType<T>() where T : Container
         {
-            if(!_typeToContainerMap.TryGetValue(typeof(T), out var containersBoundToType))
+            if(!_typeToContainerMap.TryGetValue(typeof(T), out var container))
             {
                 throw new Exception($"Error: No Container bound for Type: {nameof(T)}");
             }
-            if(!containersBoundToType.TryGetValue(containerName, out var container))
-            {
-                throw new Exception($"Error: No Container bound for Type: {nameof(T)} and Name: {containerName}.");
-            }
 
             return container;
         }
 
-        public static Container GetContainerByType(Type containerType, string containerName)
+        public static Container GetContainerByType(Type containerType)
         {
-            if(!_typeToContainerMap.TryGetValue(containerType, out var containersBoundToType))
+            if(!_typeToContainerMap.TryGetValue(containerType, out var container))
             {
                 throw new Exception($"Error: No Container bound for Type: {containerType.Name}");
             }
-            if(!containersBoundToType.TryGetValue(containerName, out var container))
-            {
-                throw new Exception($"Error: No Container bound for Type: {containerType.Name} and Name: {containerName}.");
-            }
 
             return container;
         }
-
-        public static Container GetContainerByName(string containerName)
-        {
-            if(!_nameToContainerTypeMap.TryGetValue(containerName, out var containerType))
-            {
-                Console.WriteLine("Not Found Parent");
-                throw new Exception($"Error: No Container bound to Name: {containerName}");
-            }
-            if(!_typeToContainerMap.TryGetValue(containerType, out var containersBoundToType))
-            {
-                Console.WriteLine("Not Found Parent");
-                throw new Exception($"Error: No Container bound for Type: {containerType.Name}.");
-            }
-            if(!containersBoundToType.TryGetValue(containerName, out var container))
-            {
-                Console.WriteLine("Not Found Parent");
-                throw new Exception($"Error: No Container bound for Type: {containerType.Name} and Name: {containerName}.");
-            }
-
-            Console.WriteLine("Found Parent");
-            return container;
-        }
-
+        
         public static void Dispose()
         {
             _disposing = true;
-            _nameToContainerTypeMap.Clear();
             _containerInheritanceMap.Clear();
-            foreach(var kvp in _typeToContainerMap)
+            foreach(var container in _typeToContainerMap.Values)
             {
-                foreach(var container in kvp.Value.Values)
-                {
-                    container.Dispose();
-                }
+                container.Dispose();
             }
             _typeToContainerMap.Clear();
             _disposing = false;

@@ -1,16 +1,23 @@
+using System;
 using System.Collections.Generic;
-using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace SF.IoC.Unity
 {
     public abstract class UnityContainer : Container
     {
-        protected UnityContainer(string name) : base(name, null)
+        protected UnityContainer() : base(null)
         {
         }
 
-        protected UnityContainer(string name, params string[] inheritedContainers) : base(name, inheritedContainers)
+        protected UnityContainer(params Type[] inheritedContainers) : base(inheritedContainers)
         {
+        }
+
+        protected override void SetBindings()
+        {
+            Bind<Container, UnityContainer>("", this);
+            Bind<GameObjectFactory, GameObjectFactory>().AsSingleton();
         }
 
         protected override object Resolve(System.Type type, System.Type owner, Dictionary<System.Type, List<IBinding>> resolvedBindings, string category, Dependency resolvingDependency = null, object resolvingOnto = null)
@@ -39,7 +46,7 @@ namespace SF.IoC.Unity
             }
             else
             {
-                throw new System.Exception($"Error: Type: {nameof(T1)} and Category: {category} already bound in Container: {Name}");
+                throw new System.Exception($"Error: Type: {nameof(T1)} and Category: {category} already bound in Container: {GetType().Name}");
             }
 
             return binding;

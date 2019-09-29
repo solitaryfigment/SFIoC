@@ -16,7 +16,7 @@ namespace SFIoCTest
         public void Setup()
         {
             Context.Dispose();
-            _container = new NameableTestContainer("ContainerTests");
+            _container = new NameableTestContainer();
             _container.Bind<Interface, ConcreteInterface>();
             _container.Bind<AbstractClass, ConcreteAbstractClass>();
             _container.Bind<BaseClass, SubClassWithFieldDependencies>();
@@ -31,7 +31,7 @@ namespace SFIoCTest
         public void CanMakeValidBindings()
         {
             Context.Dispose();
-            var container = new TestContainer();
+            var container = new ExtraContainer1();
             container.Bind<Interface, ConcreteInterface>();
             container.Bind<AbstractClass, ConcreteAbstractClass>();
             container.Bind<BaseClass, SubClass>();
@@ -127,7 +127,7 @@ namespace SFIoCTest
         [Test]
         public void CanResolveTypeWithSingletonCircleDependencies()
         {
-            var container = new NameableTestContainer("OtherContainer");
+            var container = new ExtraContainer1();
             container.Bind<Interface, ConcreteInterface>();
             container.Bind<AbstractClass, ConcreteAbstractClass>();
             container.Bind<BaseClass, SubClassWithFieldDependencies>();
@@ -159,41 +159,25 @@ namespace SFIoCTest
         }
 
         [Test]
-        public void ContainerNameIsSetProperly()
+        public void TwoContainersCannotHaveTheSameType()
         {
-            var container = new NameableTestContainer("NameOfContainer");
-            Assert.AreEqual("NameOfContainer", container.Name);
-        }
-
-        [Test]
-        public void TwoContainerCannotHaveTheSameName()
-        {
-            var container = new NameableTestContainer("TwoContainerCannotHaveTheSameName");
-            Assert.Throws<Exception>(() => new NameableTestContainer("TwoContainerCannotHaveTheSameName"));
-        }
-
-        [Test]
-        public void TwoContainerOfTheSameTypeCanHaveDifferentNames()
-        {
-            var container = new NameableTestContainer("ContainerName1");
-            var container2 = new NameableTestContainer("TwoContainerCannotHaveTheSameName");
-            Assert.Pass();
+            var container = new ExtraContainer1();
+            Assert.Throws<Exception>(() => new ExtraContainer1());
         }
 
         [Test]
         public void DisposingAContainerRemovesFromTheContext()
         {
-            var container = new NameableTestContainer("DisposedContainerName");
+            var container = new ExtraContainer1();
             container.Dispose();
-            Assert.Throws<Exception>(() => Context.GetContainerByName("DisposedContainerName"));
-            Assert.Throws<Exception>(() => Context.GetContainerByType<NameableTestContainer>("DisposedContainerName"));
-            Assert.Throws<Exception>(() => Context.GetContainerByType(typeof(NameableTestContainer), "DisposedContainerName"));
+            Assert.Throws<Exception>(() => Context.GetContainerByType<ExtraContainer1>());
+            Assert.Throws<Exception>(() => Context.GetContainerByType(typeof(ExtraContainer1)));
         }
 
         [Test]
         public void BindingsOfSameTypeButDifferentCategoriesReturnDifferentObjectsForTransient()
         {
-            var container = new NameableTestContainer("DifferentBindingContainerName");
+            var container = new ExtraContainer1();
             container.Bind<Interface, ConcreteInterface>("Binding1");
             container.Bind<Interface, ConcreteInterface>("Binding2");
 
@@ -208,7 +192,7 @@ namespace SFIoCTest
         [Test]
         public void BindingsOfSameTypeButDifferentCategoriesReturnDifferentObjectsForSingleton()
         {
-            var container = new NameableTestContainer("DifferentBindingContainerName2");
+            var container = new ExtraContainer1();
             container.Bind<Interface, ConcreteInterface>("Binding1").AsSingleton();
             container.Bind<Interface, ConcreteInterface>("Binding2").AsSingleton();
 
@@ -223,7 +207,7 @@ namespace SFIoCTest
         [Test]
         public void BindingsOfSameTypeButDifferentCategoriesReturnDifferentObjectsForInstanced()
         {
-            var container = new NameableTestContainer("DifferentBindingContainerName2");
+            var container = new ExtraContainer1();
             container.Bind<Interface, ConcreteInterface>("Binding1", new ConcreteInterface());
             container.Bind<Interface, ConcreteInterface>("Binding2", new ConcreteInterface());
 
@@ -234,12 +218,12 @@ namespace SFIoCTest
             Assert.NotNull(interface2);
             Assert.AreNotEqual(interface1, interface2);
         }
-
+        
         [Test]
         public void BindingsGivenTheSameInstanceResolveToTheSameObject()
         {
             var instance = new ConcreteInterface();
-            var container = new NameableTestContainer("DifferentBindingContainerName2");
+            var container = new ExtraContainer1();
             container.Bind<Interface, ConcreteInterface>("Binding1", instance);
             container.Bind<Interface, ConcreteInterface>("Binding2", instance);
 
@@ -254,7 +238,7 @@ namespace SFIoCTest
         [Test]
         public void CanResolveTypeWithDefaultConstructor()
         {
-            var container = new NameableTestContainer("DefaultConstructor");
+            var container = new ExtraContainer1();
             container.Bind<BaseClass, SubClassWithConstructorDependencies>();
             container.Bind<Interface, ConcreteInterface>();
             container.Bind<AbstractClass, ConcreteAbstractClass>("First");
@@ -271,7 +255,7 @@ namespace SFIoCTest
         [Test]
         public void CanResolveTypeWithDefaultConstructorInInheritedClass()
         {
-            var container = new NameableTestContainer("InheritedDefaultConstructor");
+            var container = new ExtraContainer1();
             container.Bind<BaseClass, SubSubClassWithConstructorDependencies>();
             container.Bind<Interface, ConcreteInterface>();
             container.Bind<AbstractClass, ConcreteAbstractClass>("First");
@@ -288,7 +272,7 @@ namespace SFIoCTest
         [Test]
         public void TransientBindingsTypeWithDefaultConstructorFailIfCircularDependencies()
         {
-            var container = new NameableTestContainer("CircularDefaultConstructor1");
+            var container = new ExtraContainer1();
             container.Bind<BaseClass, DefaultConstructorCircularDependency>("First");
             container.Bind<BaseClass, DefaultConstructorCircularDependencyOther>("Second");
 
@@ -298,7 +282,7 @@ namespace SFIoCTest
         [Test]
         public void SingletonBindingsTypeWithDefaultConstructorFailIfCircularDependencies()
         {
-            var container = new NameableTestContainer("CircularDefaultConstructor2");
+            var container = new ExtraContainer1();
             container.Bind<BaseClass, DefaultConstructorCircularDependency>("First").AsSingleton();
             container.Bind<BaseClass, DefaultConstructorCircularDependencyOther>("Second").AsSingleton();
 
@@ -310,7 +294,7 @@ namespace SFIoCTest
         {
             var first = new DefaultConstructorCircularDependency(null);
             var second = new DefaultConstructorCircularDependencyOther(first);
-            var container = new NameableTestContainer("CircularDefaultConstructor3");
+            var container = new ExtraContainer1();
             container.Bind<BaseClass, DefaultConstructorCircularDependency>("First");
             container.Bind<BaseClass, DefaultConstructorCircularDependencyOther>("Second", second);
 
