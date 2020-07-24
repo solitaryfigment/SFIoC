@@ -4,6 +4,123 @@ using System.Reflection;
 
 namespace SF.IoC
 {
+    public class Resolver
+    {
+        private Type _boundType;
+        private string _category;
+        private Func<Type, string, IBinding> _getBinding;
+        private Action<Type, Type, string, Dependency, object> _preResolve;
+        private Dictionary<Type, List<IBinding>> _resolvedBindings = new Dictionary<Type, List<IBinding>>();
+        private HashSet<Type> _proxiedBindings = new HashSet<Type>();
+        
+        public Resolver(Type boundType, string category, Func<Type, string, IBinding> getBinding, Action<Type, Type, string, Dependency, object> preResolve)
+        {
+            _boundType = boundType;
+            _category = category;
+            _getBinding = getBinding;
+            _preResolve = preResolve;
+        }
+
+        public virtual object Resolve()
+        {
+            return Resolve(_boundType, null, _category);
+        }
+
+        protected virtual object Resolve(Type type, Type owner, string category, Dependency resolvingDependency = null, object resolvingOnto = null)
+        {
+            _preResolve(type, owner, category, resolvingDependency, resolvingOnto);
+            var binding = _getBinding(type, category);
+            if(binding.HasInstanceAvailable())
+            {
+                return binding.Resolve(resolvingOnto, resolvingDependency);
+            }
+
+            if(binding.IsProxy)
+            {
+                if(_proxiedBindings.Contains(binding.TypeBoundFrom))
+                {
+                    throw new CircularProxyException($"Circular dependency detected in {_boundType.Name} on {binding.TypeBoundTo.Name}.");
+                }
+
+                _proxiedBindings.Add(binding.TypeBoundFrom);
+                return Resolve(binding.TypeBoundTo, null, category);
+            }
+            else
+            {
+                _proxiedBindings.Clear();
+            }
+            
+            List<IBinding> bindings = null;
+            if(owner != null && !_resolvedBindings.TryGetValue(owner, out bindings))
+            {
+                bindings = new List<IBinding>();
+                _resolvedBindings.Add(owner, bindings);
+            }
+            
+            if(owner != null && bindings != null && bindings.Contains(binding))
+            {
+                throw new CircularDependencyException($"Circular dependency detected in {owner.Name} on {binding.TypeBoundTo.Name}.");
+            }
+
+            if(owner != null)
+            {
+                bindings?.Add(binding);
+            }
+            
+            var dependencies = binding.GetDependencies();
+            ConstructorDependency constructorDependency = null;
+
+            if(dependencies.Count > 0)
+            {
+                constructorDependency = dependencies[0] as ConstructorDependency;
+            }
+
+            object instance = null;
+            if(constructorDependency != null)
+            {
+                var arguments = new object[constructorDependency.ArgumentDependencies.Count];
+                for(int i = 0; i < constructorDependency.ArgumentDependencies.Count; i++)
+                {
+                    var dependency = constructorDependency.ArgumentDependencies[i];
+                    try
+                    {
+                        arguments[i] = Resolve(dependency.Type, binding.TypeBoundTo, dependency.Category, dependency);
+                    }
+                    catch(Exception exception)
+                    {
+                        throw new Exception($"Could not resolve Type {dependency.Type.Name} in DefaultConstructor of Type {binding.TypeBoundTo.Name}.", exception);
+                    }
+                }
+                instance = binding.Resolve(resolvingOnto, resolvingDependency, arguments);
+            }
+            else
+            {
+                instance = binding.Resolve(resolvingOnto, resolvingDependency);
+            }
+
+            if(instance == null)
+            {
+                throw new Exception($"Could not resolve {type.Name}.");
+            }
+            
+            foreach(var dependency in dependencies)
+            {
+                switch(dependency.MemberType)
+                {
+                    case MemberTypes.Field:
+                        var field = instance.GetType().GetField(dependency.MemberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy);
+                        field?.SetValue(instance, Resolve(dependency.Type, binding.TypeBoundTo, dependency.Category, dependency, instance));
+                        break;
+                    case MemberTypes.Property:
+                        var property = instance.GetType().GetProperty(dependency.MemberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy);
+                        property?.SetValue(instance, Resolve(dependency.Type, binding.TypeBoundTo, dependency.Category, dependency, instance));
+                        break;
+                }
+            }
+            return instance;
+        }
+    }
+    
     public abstract class Container : IDisposable
     {
         protected readonly Dictionary<Type, Dictionary<string, IBinding>> _bindings = new Dictionary<Type, Dictionary<string, IBinding>>();
@@ -32,6 +149,7 @@ namespace SF.IoC
             SetBindings();
             OnSetupComplete();
         }
+        
         protected abstract void SetBindings();
 
         protected virtual void OnSetupComplete()
@@ -91,15 +209,26 @@ namespace SF.IoC
 
         public T Resolve<T>(string category = "") where T : class
         {
-            return Resolve(typeof(T), null, new Dictionary<Type, List<IBinding>>(), category) as T;
+            return Resolve(new Resolver(typeof(T), category, GetBinding, PreResolve)) as T;
         }
 
-        protected IBinding GetBinding(Type type, string category)
+        protected virtual object Resolve(Resolver resolver)
+        {
+            return resolver.Resolve();
+        }
+
+        protected virtual void PreResolve(Type type, Type owner, string category, Dependency resolvingDependency = null, object resolvingOnto = null)
+        {
+        }
+
+        protected virtual IBinding GetBinding(Type type, string category)
         {
             IBinding binding;
             try
             {
                 binding = FindBinding(type, category);
+                
+                // TODO: Handle this better
                 if(_overrideBinding != null)
                 {
                     _overrideBinding.TypeBoundFrom = binding.TypeBoundFrom;
@@ -123,84 +252,7 @@ namespace SF.IoC
 
             return binding;
         }
-        protected virtual object Resolve(Type type, Type owner, Dictionary<Type, List<IBinding>> resolvedBindings, string category, Dependency resolvingDependency = null, object resolvingOnto = null)
-        {
-            var binding = GetBinding(type, category);
-            if(binding.HasInstanceAvailable())
-            {
-                return binding.Resolve(resolvingOnto, resolvingDependency);
-            }
-            
-            List<IBinding> bindings = null;
-            if(owner != null && !resolvedBindings.TryGetValue(owner, out bindings))
-            {
-                bindings = new List<IBinding>();
-                resolvedBindings.Add(owner, bindings);
-            }
-            
-            if(owner != null && bindings != null && bindings.Contains(binding))
-            {
-                throw new CircularDependencyException($"Circular dependency detected in {owner.Name} on {binding.TypeBoundTo.Name}.");
-            }
-
-            if(owner != null)
-            {
-                bindings?.Add(binding);
-            }
-            
-            var dependencies = binding.GetDependencies();
-            ConstructorDependency constructorDependency = null;
-
-            if(dependencies.Count > 0)
-            {
-                constructorDependency = dependencies[0] as ConstructorDependency;
-            }
-
-            object instance = null;
-            if(constructorDependency != null)
-            {
-                var arguments = new object[constructorDependency.ArgumentDependencies.Count];
-                for(int i = 0; i < constructorDependency.ArgumentDependencies.Count; i++)
-                {
-                    var dependency = constructorDependency.ArgumentDependencies[i];
-                    try
-                    {
-                        arguments[i] = Resolve(dependency.Type, binding.TypeBoundTo, resolvedBindings, dependency.Category, dependency);
-                    }
-                    catch(Exception exception)
-                    {
-                        throw new Exception($"Could not resolve Type {dependency.Type.Name} in DefaultConstructor of Type {binding.TypeBoundTo.Name}.", exception);
-                    }
-                }
-                instance = binding.Resolve(resolvingOnto, resolvingDependency, arguments);
-            }
-            else
-            {
-                instance = binding.Resolve(resolvingOnto, resolvingDependency);
-            }
-
-            if(instance == null)
-            {
-                throw new Exception($"Could not resolve {type.Name}.");
-            }
-            
-            foreach(var dependency in dependencies)
-            {
-                switch(dependency.MemberType)
-                {
-                    case MemberTypes.Field:
-                        var field = instance.GetType().GetField(dependency.MemberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy);
-                        field?.SetValue(instance, Resolve(dependency.Type, binding.TypeBoundTo, resolvedBindings, dependency.Category, dependency, instance));
-                        break;
-                    case MemberTypes.Property:
-                        var property = instance.GetType().GetProperty(dependency.MemberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy);
-                        property?.SetValue(instance, Resolve(dependency.Type, binding.TypeBoundTo, resolvedBindings, dependency.Category, dependency, instance));
-                        break;
-                }
-            }
-            return instance;
-        }
-
+      
         public List<Tuple<string, IBinding>> GetBindings()
         {
             var list = new List<Tuple<string, IBinding>>();

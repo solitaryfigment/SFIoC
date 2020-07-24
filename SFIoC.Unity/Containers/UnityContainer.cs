@@ -20,14 +20,13 @@ namespace SF.IoC.Unity
             Bind<GameObjectFactory, GameObjectFactory>().AsSingleton();
         }
 
-        protected override object Resolve(System.Type type, System.Type owner, Dictionary<System.Type, List<IBinding>> resolvedBindings, string category, Dependency resolvingDependency = null, object resolvingOnto = null)
+        protected override void PreResolve(Type type, Type owner, string category, Dependency resolvingDependency = null, object resolvingOnto = null)
         {
             var componentDependency = resolvingDependency as ComponentReferenceDependency;
             if(componentDependency != null)
             {
                 _overrideBinding = new ComponentBinding(componentDependency.Type, componentDependency.Type);
             }
-            return base.Resolve(type, owner, resolvedBindings, category, resolvingDependency, resolvingOnto);
         }
         
         public IBinding BindPrefab<T1, T2>(string pathToPrefab, string category = "", T2 instance = null) where T2 : Object, T1

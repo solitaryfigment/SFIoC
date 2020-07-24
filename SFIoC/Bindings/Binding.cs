@@ -13,6 +13,9 @@ namespace SF.IoC
         
         public Type TypeBoundFrom { get; internal set; }
         public Type TypeBoundTo { get; internal set; }
+        public Delegate FactoryMethod { get; internal set; }
+        public string ProxyCategory { get; protected set; }
+        public bool IsProxy { get; protected set; }
 
         protected Binding(Type typeBoundFrom, Type typeBoundTo)
         {
@@ -36,6 +39,19 @@ namespace SF.IoC
         public virtual bool HasInstanceAvailable()
         {
             return _instance != null;
+        }
+
+        public virtual IBinding AsProxy(string category = "")
+        {
+            ProxyCategory = category;
+            IsProxy = true;
+            return this;
+        }
+
+        public virtual IBinding ToFunction<T>(Func<T> factoryMethod)
+        {
+            FactoryMethod = factoryMethod;
+            return this;
         }
         
         public virtual IBinding AsSingleton()
@@ -147,6 +163,19 @@ namespace SF.IoC
             {
                 return _instance;
             }
+
+            if(FactoryMethod != null)
+            {
+                object instance = FactoryMethod.DynamicInvoke();
+
+                if(_bingingType == BingingType.Singleton)
+                {
+                    _instance = instance;
+                }
+
+                return instance;
+            }
+            
             if(_bingingType != BingingType.Singleton)
             {
                 if(args != null && args.Length > 0)

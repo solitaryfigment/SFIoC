@@ -150,6 +150,11 @@ namespace SFIoCTest
     {
         
     }
+    
+    public class SubSubClass : SubClass
+    {
+        
+    }
 
     public class SubClassWithCategory : BaseClass
     {

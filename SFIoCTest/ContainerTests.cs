@@ -311,6 +311,57 @@ namespace SFIoCTest
             Assert.AreEqual(second, secondResolved);
         }
 
+        [Test]
+        public void CanBindFunction()
+        {
+            var container = new TestContainer();
+            container.Bind<BaseClass, SubClass>().ToFunction(GenerateSubclass);
+            container.Bind<BaseClass, SubClass>("Two").AsSingleton().ToFunction(GenerateSubclass);
+
+            var one = container.Resolve<BaseClass>();
+            var two = container.Resolve<BaseClass>("Two");
+            var twoAgain = container.Resolve<BaseClass>("Two");
+            
+            Assert.NotNull(one);
+            Assert.NotNull(two);
+            Assert.AreEqual(one.GetType(), two.GetType());
+            Assert.AreSame(two, twoAgain);
+        }
+
+        private SubClass GenerateSubclass()
+        {
+            return new SubClass();
+        }
+
+        [Test]
+        public void CanProxyBindings()
+        {
+            var container = new TestContainer();
+            container.Bind<SubClass, SubClass>().AsSingleton();
+            container.Bind<BaseClass, SubClass>().AsSingleton().AsProxy();
+
+            var fromBase = container.Resolve<BaseClass>();
+            var fromSub = container.Resolve<SubClass>();
+            
+            Assert.AreEqual(fromBase, fromSub);
+            Assert.AreSame(fromBase, fromSub);
+        }
+
+        [Test]
+        public void CannotCreateCircularProxyBindings()
+        {
+            var container = new TestContainer();
+            container.Bind<SubClass, SubClass>().AsSingleton().AsProxy();
+            container.Bind<BaseClass, SubClass>().AsSingleton().AsProxy();
+            
+            Assert.Throws<CircularProxyException>(() =>
+                                                  {
+                                                      var fromBase = container.Resolve<BaseClass>();
+                                                  });
+            
+            Assert.Pass();
+        }
+
         public void ThrowsInnerException<T>(Action code) where T : Exception
         {
             try

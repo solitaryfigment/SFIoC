@@ -4,7 +4,7 @@ namespace SF.IoC.Unity
 {
     public class GameObjectFactory
     {
-        [Inject] private Container _container;
+        [Inject] private Container _container = null;
         
         public T CreateGameObject<T>(Transform parent = null, string category = "") where T : Component
         {
