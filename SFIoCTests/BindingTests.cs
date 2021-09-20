@@ -281,6 +281,31 @@ namespace SFIoCTest
         }
 
         [Test]
+        public void CanGetConstructorDependenciesNonDefaultConstructor()
+        {
+            var binding1 = new Binding<BaseClass, SubClassWithConstructorDependencies2>();
+            var dependencies = binding1.GetDependencies();
+
+            Assert.NotNull(dependencies);
+            Assert.AreEqual(1, dependencies.Count);
+            Assert.AreEqual("Constructor", dependencies[0].MemberName);
+            Assert.AreEqual(MemberTypes.Constructor, dependencies[0].MemberType);var constructorDependencies = ((ConstructorDependency)dependencies[0]).ArgumentDependencies;
+
+            Assert.NotNull(constructorDependencies);
+            Assert.AreEqual(2, constructorDependencies.Count);
+
+            Assert.AreEqual("interface", constructorDependencies[0].MemberName);
+            Assert.AreEqual(typeof(Interface), constructorDependencies[0].Type);
+            Assert.AreEqual(MemberTypes.Constructor, constructorDependencies[0].MemberType);
+            Assert.AreEqual("", constructorDependencies[0].Category);
+
+            Assert.AreEqual("abstractClass", constructorDependencies[1].MemberName);
+            Assert.AreEqual(typeof(AbstractClass), constructorDependencies[1].Type);
+            Assert.AreEqual(MemberTypes.Constructor, constructorDependencies[1].MemberType);
+            Assert.AreEqual("", constructorDependencies[1].Category);
+        }
+
+        [Test]
         public void CanGetConstructorDependenciesFromInheritedClass()
         {
             var binding1 = new Binding<BaseClass, SubSubClassWithConstructorDependencies>();

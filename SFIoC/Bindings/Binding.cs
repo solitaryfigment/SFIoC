@@ -78,17 +78,22 @@ namespace SF.IoC
             var injectedMembers = members.Where(m => m.GetCustomAttributes(true).Any(a => a is InjectAttribute));
 
             var constructorInfos = new List<ConstructorInfo>();
-            constructorInfos.AddRange(TypeBoundTo.GetConstructors().Where(c => c.GetCustomAttributes(true).Any(a => a is DefaultConstructorAttribute)));
-            if(constructorInfos.Count == 0)
+            constructorInfos = TypeBoundTo.GetConstructors().ToList();
+            if (constructorInfos.Count > 1)
             {
-                var type = TypeBoundTo.BaseType;
-                while(type!= null && type != typeof(object) && constructorInfos.Count == 0)
+                constructorInfos.AddRange(constructorInfos.Where(c => c.GetCustomAttributes(true).Any(a => a is DefaultConstructorAttribute)));
+                if(constructorInfos.Count == 0)
                 {
-                    constructorInfos.AddRange(type.GetConstructors().Where(c => c.GetCustomAttributes(true).Any(a => a is DefaultConstructorAttribute)));
-                    type = type.BaseType;
+                    var type = TypeBoundTo.BaseType;
+                    while(type != null && type != typeof(object) && constructorInfos.Count == 0)
+                    {
+                        constructorInfos.AddRange(type.GetConstructors().Where(c => c.GetCustomAttributes(true).Any(a => a is DefaultConstructorAttribute)));
+                        type = type.BaseType;
+                    }
                 }
             }
-            
+
+
             var constructorDependencies = new List<Dependency>();
 
             if(constructorInfos.Count == 1)
@@ -118,7 +123,12 @@ namespace SF.IoC
                 if(constructorDependencies.Count > 0)
                 {
                     var attribute = constructorInfo.GetCustomAttribute<DefaultConstructorAttribute>(true);
-                    _dependencies.Add(attribute.CreateDependency("Constructor", MemberTypes.Constructor, constructorDependencies));
+                    _dependencies.Add(new ConstructorDependency
+                    {
+                        MemberName = "Constructor",
+                        MemberType = MemberTypes.Constructor,
+                        ArgumentDependencies = constructorDependencies
+                    });
                 }
             }
             else if (constructorInfos.Count > 1)

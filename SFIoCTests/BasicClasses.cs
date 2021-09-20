@@ -101,6 +101,19 @@ namespace SFIoCTest
         }
     }
     
+    public class SubClassWithConstructorDependencies2 : BaseClass
+    {
+        public Interface Interface { get; set; }
+
+        public AbstractClass AbstractClass { get; set; }
+
+        public SubClassWithConstructorDependencies2(Interface @interface, AbstractClass abstractClass)
+        {
+            Interface = @interface;
+            AbstractClass = abstractClass;
+        }
+    }
+    
     public class DefaultConstructorCircularDependency : BaseClass
     {
         public BaseClass BaseClass { get; set; }
