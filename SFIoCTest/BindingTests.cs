@@ -14,7 +14,7 @@ namespace SFIoCTest
             var obj = new ConcreteInterface();
             var binding1 = new Binding<Interface, ConcreteInterface>(obj);
             var resolvedObj = binding1.Resolve(null, null);
-            
+
             Assert.NotNull(resolvedObj);
             Assert.NotNull(obj);
         }
@@ -25,7 +25,7 @@ namespace SFIoCTest
             var binding1 = new Binding<Interface, ConcreteInterface>();
             var resolvedObj1 = binding1.Resolve(null, null);
             var resolvedObj2 = binding1.Resolve(null, null);
-            
+
             Assert.NotNull(resolvedObj1);
             Assert.NotNull(resolvedObj2);
             Assert.AreNotEqual(resolvedObj1, resolvedObj2);
@@ -38,7 +38,7 @@ namespace SFIoCTest
             var binding1 = new Binding<Interface, ConcreteInterface>(obj);
             var resolvedObj1 = binding1.Resolve(null, null);
             var resolvedObj2 = binding1.Resolve(null, null);
-            
+
             Assert.NotNull(resolvedObj1);
             Assert.NotNull(resolvedObj2);
             Assert.AreEqual(obj, resolvedObj2);
@@ -52,7 +52,7 @@ namespace SFIoCTest
             var binding1 = new Binding<Interface, ConcreteInterface>().AsSingleton();
             var resolvedObj1 = binding1.Resolve(null, null, null);
             var resolvedObj2 = binding1.Resolve(null, null, null);
-            
+
             Assert.NotNull(resolvedObj1);
             Assert.NotNull(resolvedObj2);
             Assert.AreEqual(resolvedObj1, resolvedObj2);
@@ -75,7 +75,7 @@ namespace SFIoCTest
             var binding1 = new Binding<BaseClass, SubClassWithConstructorArgs>();
             var resolvedObj1 = binding1.Resolve(null, null, 42, 4.2f) as SubClassWithConstructorArgs;
             var resolvedObj2 = binding1.Resolve(null, null, 3, 1.1f) as SubClassWithConstructorArgs;
-            
+
             Assert.NotNull(resolvedObj1);
             Assert.NotNull(resolvedObj2);
             Assert.AreNotEqual(resolvedObj1, resolvedObj2);
@@ -91,7 +91,7 @@ namespace SFIoCTest
             var binding1 = new Binding<BaseClass, SubClassWithConstructorArgs>().AsSingleton();
             var resolvedObj1 = binding1.Resolve(null, null, 42, 4.2f) as SubClassWithConstructorArgs;
             var resolvedObj2 = binding1.Resolve(null, null, 3, 1.1f) as SubClassWithConstructorArgs;
-            
+
             Assert.NotNull(resolvedObj1);
             Assert.NotNull(resolvedObj2);
             Assert.AreEqual(resolvedObj1, resolvedObj2);
@@ -108,7 +108,7 @@ namespace SFIoCTest
             var binding1 = new Binding<BaseClass, SubClassWithConstructorArgs>(instance);
             var resolvedObj1 = binding1.Resolve(null, null, 42, 4.2f) as SubClassWithConstructorArgs;
             var resolvedObj2 = binding1.Resolve(null, null, 3, 1.1f) as SubClassWithConstructorArgs;
-            
+
             Assert.NotNull(resolvedObj1);
             Assert.NotNull(resolvedObj2);
             Assert.AreEqual(instance, resolvedObj1);
@@ -128,12 +128,12 @@ namespace SFIoCTest
             var dependenciesField = typeof(Binding<BaseClass,SubClassWithFieldDependencies>).GetField("_dependencies", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.NotNull(dependenciesField);
             var privateDependencies = dependenciesField.GetValue(binding1) as List<Dependency>;
-            
+
             Assert.NotNull(dependencies);
             Assert.NotNull(privateDependencies);
             Assert.AreEqual(2, dependencies.Count);
             Assert.AreEqual(2, privateDependencies.Count);
-            
+
             binding1.Dispose();
             var privateDependenciesAfter = dependenciesField.GetValue(binding1) as List<Dependency>;
             Assert.AreEqual(0, privateDependenciesAfter.Count);
@@ -148,12 +148,12 @@ namespace SFIoCTest
             var dependenciesField = typeof(Binding<BaseClass,SubClassWithFieldDependencies>).GetField("_dependencies", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.NotNull(dependenciesField);
             var privateDependencies = dependenciesField.GetValue(binding1) as List<Dependency>;
-            
+
             Assert.NotNull(dependencies);
             Assert.NotNull(privateDependencies);
             Assert.AreEqual(2, dependencies.Count);
             Assert.AreEqual(2, privateDependencies.Count);
-            
+
             binding1.Dispose();
             var privateDependenciesAfter = dependenciesField.GetValue(binding1) as List<Dependency>;
             Assert.AreEqual(0, privateDependenciesAfter.Count);
@@ -168,12 +168,12 @@ namespace SFIoCTest
             var dependenciesField = typeof(Binding<BaseClass,SubClassWithFieldDependencies>).GetField("_dependencies", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.NotNull(dependenciesField);
             var privateDependencies = dependenciesField.GetValue(binding1) as List<Dependency>;
-            
+
             Assert.NotNull(dependencies);
             Assert.NotNull(privateDependencies);
             Assert.AreEqual(2, dependencies.Count);
             Assert.AreEqual(2, privateDependencies.Count);
-            
+
             binding1.Dispose();
             var privateDependenciesAfter = dependenciesField.GetValue(binding1) as List<Dependency>;
             Assert.AreEqual(0, privateDependenciesAfter.Count);
@@ -184,7 +184,7 @@ namespace SFIoCTest
         public void TransientBindingDoesNotHaveInstanceAvailable()
         {
             var binding1 = new Binding<BaseClass, SubClassWithFieldDependencies>();
-            
+
             Assert.IsFalse(binding1.HasInstanceAvailable());
             var resolved = binding1.Resolve(null, null);
             Assert.NotNull(resolved);
@@ -195,7 +195,7 @@ namespace SFIoCTest
         public void SingletonBindingHasInstanceAvailable()
         {
             var binding1 = new Binding<BaseClass, SubClassWithFieldDependencies>().AsSingleton();
-            
+
             Assert.IsFalse(binding1.HasInstanceAvailable());
             var resolved = binding1.Resolve(null, null);
             Assert.NotNull(resolved);
@@ -206,7 +206,7 @@ namespace SFIoCTest
         public void InstancedBindingHasInstanceAvailable()
         {
             var binding1 = new Binding<BaseClass, SubClassWithFieldDependencies>(new SubClassWithFieldDependencies());
-            
+
             Assert.IsTrue(binding1.HasInstanceAvailable());
             var resolved = binding1.Resolve(null, null);
             Assert.NotNull(resolved);
@@ -236,7 +236,7 @@ namespace SFIoCTest
         [Test]
         public void CanGetPropertyDependencies()
         {
-            var binding1 = new Binding<BaseClass, SubClassWithPropetyDependencies>();
+            var binding1 = new Binding<BaseClass, SubClassWithPropertyDependencies>();
             var dependencies = binding1.GetDependencies();
 
             Assert.NotNull(dependencies);
@@ -263,7 +263,7 @@ namespace SFIoCTest
             Assert.AreEqual(1, dependencies.Count);
             Assert.AreEqual("Constructor", dependencies[0].MemberName);
             Assert.AreEqual(MemberTypes.Constructor, dependencies[0].MemberType);
-            
+
             var constructorDependencies = ((ConstructorDependency)dependencies[0]).ArgumentDependencies;
 
             Assert.NotNull(constructorDependencies);
@@ -290,7 +290,7 @@ namespace SFIoCTest
             Assert.AreEqual(1, dependencies.Count);
             Assert.AreEqual("Constructor", dependencies[0].MemberName);
             Assert.AreEqual(MemberTypes.Constructor, dependencies[0].MemberType);
-            
+
             var constructorDependencies = ((ConstructorDependency)dependencies[0]).ArgumentDependencies;
 
             Assert.NotNull(constructorDependencies);

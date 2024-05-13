@@ -5,6 +5,7 @@ namespace SF.IoC
 {
     public interface IBinding : IDisposable
     {
+        BingingType BingingType { get; }
         Type TypeBoundFrom { get; }
         Type TypeBoundTo { get; }
         IBinding AsSingleton();

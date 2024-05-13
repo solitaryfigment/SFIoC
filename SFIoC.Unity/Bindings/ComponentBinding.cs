@@ -17,9 +17,9 @@ namespace SF.IoC.Unity
                 return base.Resolve(resolvingOnto, dependency, args);
             }
             
-            if(!typeof(Object).IsAssignableFrom(TypeBoundTo))
+            if(!typeof(UnityEngine.Object).IsAssignableFrom(TypeBoundTo))
             {
-                throw new BindingException($"Type {TypeBoundTo.Name} must inherit from {nameof(Object)}.");
+                throw new BindingException($"Type {TypeBoundTo.Name} must inherit from {nameof(UnityEngine.Object)}.");
             }
 
             var referencedGameObject = component.transform.Find(componentDependency.ComponentReferencePath);

@@ -1,10 +1,7 @@
-using System;
 using SF.IoC;
 
 namespace SFIoCTest
 {
-    
-
     public class ExtraContainer1 : Container
     {
         public ExtraContainer1() : base()
@@ -49,7 +46,7 @@ namespace SFIoCTest
         {
         }
     }
-    
+
     public class SubClassWithConstructorArgs : BaseClass
     {
         public float F;
@@ -60,6 +57,7 @@ namespace SFIoCTest
             F = f;
         }
     }
+
     public class SubClassWithCircularDependencies : BaseClass
     {
         [Inject] public Interface Interface;
@@ -71,14 +69,20 @@ namespace SFIoCTest
         [Inject] public Interface Interface;
         [Inject("Circle")] public BaseClass Circle;
     }
-    
+
+    public class OtherSubClassWithCircularDependenciesNotCircular : BaseClass
+    {
+        [Inject] public Interface Interface;
+        [Inject("NotCircular")] public BaseClass NotCircular;
+    }
+
     public class SubClassWithFieldDependencies : BaseClass
     {
         [Inject] public Interface Interface;
         [Inject("First")] public Interface InterfaceWithCategory;
     }
-    
-    public class SubClassWithPropetyDependencies : BaseClass
+
+    public class SubClassWithPropertyDependencies : BaseClass
     {
         [Inject]
         public Interface Interface { get; set; }
@@ -86,7 +90,7 @@ namespace SFIoCTest
         [Inject("First")]
         public Interface InterfaceWithCategory { get; set; }
     }
-    
+
     public class SubClassWithConstructorDependencies : BaseClass
     {
         public Interface Interface { get; set; }
@@ -100,7 +104,7 @@ namespace SFIoCTest
             AbstractClass = abstractClass;
         }
     }
-    
+
     public class DefaultConstructorCircularDependency : BaseClass
     {
         public BaseClass BaseClass { get; set; }
@@ -111,7 +115,7 @@ namespace SFIoCTest
             BaseClass = baseClass;
         }
     }
-    
+
     public class DefaultConstructorCircularDependencyOther : BaseClass
     {
         public BaseClass BaseClass { get; set; }
@@ -130,40 +134,52 @@ namespace SFIoCTest
         {
         }
     }
-    
+
     public abstract class AbstractClass
     {
-        
+
     }
 
     public class ConcreteAbstractClass : AbstractClass
     {
-        
+
     }
-    
+
     public class BaseClass
     {
-        
+
     }
 
     public class SubClass : BaseClass
     {
-        
+
     }
 
     public class SubClassWithCategory : BaseClass
     {
-        
+
     }
 
     public class ConcreteInterface : Interface
     {
-        
+
     }
 
     public interface Interface
     {
-        
+
+    }
+
+    public class NonBoundType
+    {
+        [Inject] public Interface Interface;
+        [Inject("NotCircular")] public BaseClass Circular;
+    }
+
+    public class NonBoundTypeNoDependencies
+    {
+        public Interface Interface;
+        public BaseClass Circular;
     }
 
     public class TestContainer : Container
@@ -174,10 +190,10 @@ namespace SFIoCTest
 
         protected override void SetBindings()
         {
-            
+
         }
     }
-    
+
     public class NameableTestContainer : Container
     {
         public NameableTestContainer() : base()
@@ -186,10 +202,10 @@ namespace SFIoCTest
 
         protected override void SetBindings()
         {
-            
+
         }
     }
-    
+
     public class InheritTestContainer : Container
     {
         public InheritTestContainer(params Type[] inheritedContainer) : base(inheritedContainer)
@@ -198,7 +214,7 @@ namespace SFIoCTest
 
         protected override void SetBindings()
         {
-            
+
         }
     }
 
@@ -210,7 +226,7 @@ namespace SFIoCTest
 
         protected override void SetBindings()
         {
-            
+
         }
     }
 }

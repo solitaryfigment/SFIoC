@@ -2,13 +2,13 @@ using UnityEngine;
 
 namespace SF.IoC.Unity
 {
-    public class PrefabBinding<T1, T2> : Binding<T1, T2> where T2 : Object, T1
+    public class PrefabBinding<T1, T2> : Binding<T1, T2> where T2 : UnityEngine.Object, T1
     {
         private readonly string _pathToPrefab;
         
         public PrefabBinding(string pathToPrefab, T2 instance) : base(instance)
         {
-            if(!typeof(Object).IsAssignableFrom(TypeBoundTo))
+            if(!typeof(UnityEngine.Object).IsAssignableFrom(TypeBoundTo))
             {
                 throw new BindingException($"Type {TypeBoundTo.Name} must inherit from {nameof(Component)}.");
             }

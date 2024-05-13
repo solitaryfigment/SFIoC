@@ -11,7 +11,7 @@ namespace SFIoCTest
     public class ContainerTests
     {
         private Container _container;
-        
+
         [SetUp]
         public void Setup()
         {
@@ -22,11 +22,12 @@ namespace SFIoCTest
             _container.Bind<BaseClass, SubClassWithFieldDependencies>();
             _container.Bind<BaseClass, SubClassWithCircularDependencies>("Circle");
             _container.Bind<BaseClass, OtherSubClassWithCircularDependencies>("Other");
+            _container.Bind<BaseClass, OtherSubClassWithCircularDependenciesNotCircular>("NotCircular").AsSingleton();
             _container.Bind<Interface, ConcreteInterface>("First");
             _container.Bind<AbstractClass, ConcreteAbstractClass>("Second");
             _container.Bind<BaseClass, SubClassWithCategory>("Third");
         }
-        
+
         [Test]
         public void CanMakeValidBindings()
         {
@@ -61,7 +62,7 @@ namespace SFIoCTest
             Assert.AreSame(typeof(BaseClass), bindings[index].Item2.TypeBoundFrom);
             Assert.AreSame(typeof(SubClass), bindings[index].Item2.TypeBoundTo);
         }
-        
+
         [Test]
         public void CanResolveType()
         {
@@ -69,7 +70,7 @@ namespace SFIoCTest
             Assert.NotNull(obj);
             Assert.AreEqual(typeof(ConcreteInterface),obj.GetType());
         }
-        
+
         [Test]
         public void CanResolveTypeWithCategory()
         {
@@ -87,7 +88,7 @@ namespace SFIoCTest
             Assert.NotNull(binding);
             Assert.AreEqual(typeof(SubClassWithFieldDependencies), binding.TypeBoundTo);
             var dependencies = binding.GetDependencies();
-            
+
             Assert.NotNull(dependencies);
             Assert.IsTrue(dependencies.Count > 0);
             Assert.AreEqual(2, dependencies.Count(d => d.Type == typeof(Interface)));
@@ -96,17 +97,17 @@ namespace SFIoCTest
             Assert.NotNull(noCategoryDependency);
             Assert.AreEqual("Interface", noCategoryDependency.MemberName);
             Assert.AreEqual(MemberTypes.Field, noCategoryDependency.MemberType);
-            
+
             var categoryDependency = dependencies.FirstOrDefault(d => d.Category == "First" && d.Type == typeof(Interface));
             Assert.NotNull(categoryDependency);
             Assert.AreEqual("InterfaceWithCategory", categoryDependency.MemberName);
             Assert.AreEqual(MemberTypes.Field, categoryDependency.MemberType);
         }
-        
+
         [Test]
         public void ResolveTypeWithDependencies()
         {
-            var instance = _container.Resolve<BaseClass>() as SubClassWithFieldDependencies;            
+            var instance = _container.Resolve<BaseClass>() as SubClassWithFieldDependencies;
             Assert.NotNull(instance);
 
             var noCategoryDependency = instance.Interface;
@@ -117,13 +118,41 @@ namespace SFIoCTest
             Assert.NotNull(categoryDependency);
             Assert.AreEqual(typeof(ConcreteInterface), categoryDependency.GetType());
         }
-        
+
         [Test]
-        public void ResolveTypeWithCircleDependenciesFail()
+        public void InjectTypeWithDependencies()
         {
-            Assert.Throws<CircularDependencyException>(() => _container.Resolve<BaseClass>("Circle"));
+            var instance = new NonBoundType();
+            Assert.NotNull(instance);
+            Assert.IsNull(instance.Interface);
+            Assert.IsNull(instance.Circular);
+
+            _container.Inject(instance);
+            Assert.NotNull(instance);
+            Assert.NotNull(instance.Interface);
+            Assert.NotNull(instance.Circular);
         }
-        
+
+        [Test]
+        public void InjectTypeWithNoDependenciesDoesNotThrowError()
+        {
+            var instance = new NonBoundTypeNoDependencies();
+            Assert.NotNull(instance);
+            Assert.IsNull(instance.Interface);
+            Assert.IsNull(instance.Circular);
+
+            _container.Inject(instance);
+            Assert.NotNull(instance);
+            Assert.IsNull(instance.Interface);
+            Assert.IsNull(instance.Circular);
+        }
+
+        [Test]
+        public void ResolveTypeWithTransientPropertyCircleDependenciesFails()
+        {
+            ThrowsInnerException<CircularDependencyException>(() => _container.Resolve<BaseClass>("Circle"));
+        }
+
         [Test]
         public void CanResolveTypeWithSingletonCircleDependencies()
         {
@@ -136,8 +165,8 @@ namespace SFIoCTest
             container.Bind<Interface, ConcreteInterface>("First");
             container.Bind<AbstractClass, ConcreteAbstractClass>("Second");
             container.Bind<BaseClass, SubClassWithCategory>("Third");
-            
-            var instance = container.Resolve<BaseClass>("Circle") as SubClassWithCircularDependencies;            
+
+            var instance = container.Resolve<BaseClass>("Circle") as SubClassWithCircularDependencies;
             Assert.NotNull(instance);
 
             var dependencyInterface = instance.Interface;
@@ -147,7 +176,7 @@ namespace SFIoCTest
             var circular = instance.Circular;
             Assert.NotNull(circular);
             Assert.AreEqual(typeof(OtherSubClassWithCircularDependencies), circular.GetType());
-            
+
             var otherInterface = ((OtherSubClassWithCircularDependencies)circular).Interface;
             Assert.NotNull(otherInterface);
             Assert.AreEqual(typeof(ConcreteInterface), otherInterface.GetType());
@@ -183,7 +212,7 @@ namespace SFIoCTest
 
             var interface1 = container.Resolve<Interface>("Binding1");
             var interface2 = container.Resolve<Interface>("Binding2");
-            
+
             Assert.NotNull(interface1);
             Assert.NotNull(interface2);
             Assert.AreNotEqual(interface1, interface2);
@@ -198,7 +227,7 @@ namespace SFIoCTest
 
             var interface1 = container.Resolve<Interface>("Binding1");
             var interface2 = container.Resolve<Interface>("Binding2");
-            
+
             Assert.NotNull(interface1);
             Assert.NotNull(interface2);
             Assert.AreNotEqual(interface1, interface2);
@@ -213,12 +242,12 @@ namespace SFIoCTest
 
             var interface1 = container.Resolve<Interface>("Binding1");
             var interface2 = container.Resolve<Interface>("Binding2");
-            
+
             Assert.NotNull(interface1);
             Assert.NotNull(interface2);
             Assert.AreNotEqual(interface1, interface2);
         }
-        
+
         [Test]
         public void BindingsGivenTheSameInstanceResolveToTheSameObject()
         {
@@ -229,7 +258,7 @@ namespace SFIoCTest
 
             var interface1 = container.Resolve<Interface>("Binding1");
             var interface2 = container.Resolve<Interface>("Binding2");
-            
+
             Assert.NotNull(interface1);
             Assert.NotNull(interface2);
             Assert.AreEqual(interface1, interface2);
@@ -244,7 +273,7 @@ namespace SFIoCTest
             container.Bind<AbstractClass, ConcreteAbstractClass>("First");
 
             var baseClass = container.Resolve<BaseClass>() as SubClassWithConstructorDependencies;
-            
+
             Assert.NotNull(baseClass);
             Assert.NotNull(baseClass.Interface);
             Assert.NotNull(baseClass.AbstractClass);
@@ -261,7 +290,7 @@ namespace SFIoCTest
             container.Bind<AbstractClass, ConcreteAbstractClass>("First");
 
             var baseClass = container.Resolve<BaseClass>() as SubClassWithConstructorDependencies;
-            
+
             Assert.NotNull(baseClass);
             Assert.NotNull(baseClass.Interface);
             Assert.NotNull(baseClass.AbstractClass);
@@ -306,7 +335,7 @@ namespace SFIoCTest
             Assert.NotNull(firstCircularResolved);
             var secondShouldBePassedIn = firstCircularResolved.BaseClass;
             Assert.IsNull(secondShouldBePassedIn);
-            
+
             Assert.AreNotEqual(firstResolved, firstCircularResolved);
             Assert.AreEqual(second, secondResolved);
         }
@@ -323,7 +352,7 @@ namespace SFIoCTest
             }
             catch(Exception exception)
             {
-                Exception innerException = exception; 
+                Exception innerException = exception;
                 while(!(innerException is T))
                 {
                     if(innerException.InnerException != null)

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using SFIoC.Utils;
 
 namespace SF.IoC
 {
@@ -8,11 +9,11 @@ namespace SF.IoC
     {
         protected readonly Dictionary<Type, Dictionary<string, IBinding>> _bindings = new Dictionary<Type, Dictionary<string, IBinding>>();
         protected Binding _overrideBinding;
-        
+
         protected Container() : this(null)
         {
         }
-        
+
         protected Container(params Type[] inheritedContainers)
         {
             Context.AddContainer(this);
@@ -32,12 +33,13 @@ namespace SF.IoC
             SetBindings();
             OnSetupComplete();
         }
+
         protected abstract void SetBindings();
 
         protected virtual void OnSetupComplete()
         {
         }
-        
+
         public virtual IBinding Bind<T1, T2>(string category = "", T2 instance = null) where T2 : class, T1
         {
             var bindFromType = typeof(T1);
@@ -46,7 +48,7 @@ namespace SF.IoC
                 categoryBindingMap = new Dictionary<string, IBinding>();
                 _bindings[bindFromType] = categoryBindingMap;
             }
-            
+
             if(!categoryBindingMap.TryGetValue(category, out var binding))
             {
                 binding = new Binding<T1, T2>(instance);
@@ -59,17 +61,17 @@ namespace SF.IoC
 
             return binding;
         }
-        
+
         protected void InheritFrom<T>() where T : Container
         {
             Context.AddInheritance<T>(this);
         }
-        
+
         protected void InheritFrom(Type containerType)
         {
             Context.AddInheritance(this, containerType);
         }
-        
+
         internal IBinding FindBinding(Type type, string category = "")
         {
             IBinding binding = null;
@@ -78,15 +80,37 @@ namespace SF.IoC
                 throw new Exception($"Error: Type: {type.Name} not bound in Container: {GetType().Name}");
             }
 
-            if(binding == null && 
-               bindingMap != null && 
-               !bindingMap.TryGetValue(category, out binding) && 
+            if(binding == null &&
+               bindingMap != null &&
+               !bindingMap.TryGetValue(category, out binding) &&
                !Context.FindInheritedBinding(this, type, category, out binding))
             {
                 throw new Exception($"Error: Type: {type.Name} and Category: {category} not bound in Container: {GetType().Name}");
             }
 
             return binding;
+        }
+
+        public void Inject(object instance)
+        {
+            var dependencies = DependencyFinder.GetDependencies(instance);
+            var type = instance.GetType();
+            var resolvedBindings = new Dictionary<Type, List<IBinding>>();
+
+            foreach(var dependency in dependencies)
+            {
+                switch(dependency.MemberType)
+                {
+                    case MemberTypes.Field:
+                        var field = instance.GetType().GetField(dependency.MemberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy);
+                        field?.SetValue(instance, Resolve(dependency.Type, type, resolvedBindings, dependency.Category, dependency, instance));
+                        break;
+                    case MemberTypes.Property:
+                        var property = instance.GetType().GetProperty(dependency.MemberName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy);
+                        property?.SetValue(instance, Resolve(dependency.Type, type, resolvedBindings, dependency.Category, dependency, instance));
+                        break;
+                }
+            }
         }
 
         public T Resolve<T>(string category = "") where T : class
@@ -123,6 +147,7 @@ namespace SF.IoC
 
             return binding;
         }
+
         protected virtual object Resolve(Type type, Type owner, Dictionary<Type, List<IBinding>> resolvedBindings, string category, Dependency resolvingDependency = null, object resolvingOnto = null)
         {
             var binding = GetBinding(type, category);
@@ -130,24 +155,28 @@ namespace SF.IoC
             {
                 return binding.Resolve(resolvingOnto, resolvingDependency);
             }
-            
+
             List<IBinding> bindings = null;
             if(owner != null && !resolvedBindings.TryGetValue(owner, out bindings))
             {
                 bindings = new List<IBinding>();
                 resolvedBindings.Add(owner, bindings);
             }
-            
+
             if(owner != null && bindings != null && bindings.Contains(binding))
             {
-                throw new CircularDependencyException($"Circular dependency detected in {owner.Name} on {binding.TypeBoundTo.Name}.");
+                var previouslyResolvedBinding = bindings.Find(b => b == binding);
+                if (resolvingDependency?.MemberType == MemberTypes.Constructor || previouslyResolvedBinding.BingingType == BingingType.Transient)
+                {
+                    throw new CircularDependencyException($"Circular dependency detected in {owner.Name} on {binding.TypeBoundTo.Name}.");
+                }
             }
 
             if(owner != null)
             {
                 bindings?.Add(binding);
             }
-            
+
             var dependencies = binding.GetDependencies();
             ConstructorDependency constructorDependency = null;
 
@@ -183,7 +212,7 @@ namespace SF.IoC
             {
                 throw new Exception($"Could not resolve {type.Name}.");
             }
-            
+
             foreach(var dependency in dependencies)
             {
                 switch(dependency.MemberType)
@@ -204,7 +233,7 @@ namespace SF.IoC
         public List<Tuple<string, IBinding>> GetBindings()
         {
             var list = new List<Tuple<string, IBinding>>();
-            
+
             foreach(var bindingMaps in _bindings.Values)
             {
                 foreach(var kvp in bindingMaps)
@@ -227,7 +256,7 @@ namespace SF.IoC
             {
                 foreach(var binding in bindings.Values)
                 {
-                    binding.Dispose(); 
+                    binding.Dispose();
                 }
                 bindings.Clear();
             }
