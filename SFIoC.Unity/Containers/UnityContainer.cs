@@ -29,8 +29,8 @@ namespace SF.IoC.Unity
             }
             return base.Resolve(type, owner, resolvedBindings, category, resolvingDependency, resolvingOnto);
         }
-        
-        public IBinding BindPrefab<T1, T2>(string pathToPrefab, string category = "", T2 instance = null) where T2 : Object, T1
+
+        public IBinding BindResource<T1, T2>(string pathToPrefab, string category = "", T2 instance = null) where T2 : Object, T1
         {
             var bindFromType = typeof(T1);
             if(!_bindings.TryGetValue(bindFromType, out var categoryBindingMap))
@@ -38,10 +38,10 @@ namespace SF.IoC.Unity
                 categoryBindingMap = new Dictionary<string, IBinding>();
                 _bindings[bindFromType] = categoryBindingMap;
             }
-            
+
             if(!categoryBindingMap.TryGetValue(category, out var binding))
             {
-                binding = new PrefabBinding<T1, T2>(pathToPrefab, instance);
+                binding = new ResourceBinding<T1, T2>(pathToPrefab, instance);
                 categoryBindingMap[category] = binding;
             }
             else

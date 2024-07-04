@@ -2,11 +2,11 @@ using UnityEngine;
 
 namespace SF.IoC.Unity
 {
-    public class PrefabBinding<T1, T2> : Binding<T1, T2> where T2 : UnityEngine.Object, T1
+    public class ResourceBinding<T1, T2> : Binding<T1, T2> where T2 : UnityEngine.Object, T1
     {
         private readonly string _pathToPrefab;
-        
-        public PrefabBinding(string pathToPrefab, T2 instance) : base(instance)
+
+        public ResourceBinding(string pathToPrefab, T2 instance) : base(instance)
         {
             if(!typeof(UnityEngine.Object).IsAssignableFrom(TypeBoundTo))
             {
@@ -22,13 +22,13 @@ namespace SF.IoC.Unity
             {
                 return _instance;
             }
-            
+
             if(_bingingType == BingingType.Singleton)
             {
-                _instance = (T1)GameObject.Instantiate(Resources.Load<T2>(_pathToPrefab));
+                _instance = (T1)Object.Instantiate(Resources.Load<T2>(_pathToPrefab));
             }
 
-            return _instance ?? (T1)GameObject.Instantiate(Resources.Load<T2>(_pathToPrefab));
+            return _instance ?? (T1)Object.Instantiate(Resources.Load<T2>(_pathToPrefab));
         }
     }
 }
